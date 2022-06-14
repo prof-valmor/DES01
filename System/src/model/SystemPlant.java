@@ -8,6 +8,7 @@ import java.util.TimerTask;
  * A sensor can be added to the tank.
  */
 public class SystemPlant {
+    private static SystemPlant instance;
     private Tank  theTank;
     private Valve inputValve;
     private Valve outputValve;
@@ -17,12 +18,17 @@ public class SystemPlant {
     private Timer timer;
     private OnPlantUpdateListener listener;
 
-    public SystemPlant() {
+    public static SystemPlant getInstance() {
+        if(instance == null) instance = new SystemPlant();
+        return instance;
+    }
+
+    private SystemPlant() {
         theTank     = new Tank(300.0);
-        inputValve  = new Valve(10.0);
-        outputValve = new Valve(20.0);
+        inputValve  = new Valve(10.23);
+        outputValve = new Valve(11.01);
         theSensor   = new LinearVolumeSensor();
-        theTank.setSensor(theSensor);
+        theTank.addVolumeSensor(theSensor);
         //
         timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
@@ -32,15 +38,15 @@ public class SystemPlant {
                     inputValve.onTimePass(1);
                     outputValve.onTimePass(1);
                     //
-                    if(listener != null) listener.onPlantUpdate();
+                    if(listener != null) listener.onPlantUpdate(instance);
                 }
             }
         }, 0, 1000);
         //
-        inputValve.setListener(volumeDispensed -> {
+        inputValve.addListener(volumeDispensed -> {
             theTank.add(volumeDispensed);
         });
-        outputValve.setListener((volumeDispensed -> {
+        outputValve.addListener((volumeDispensed -> {
             theTank.remove(volumeDispensed);
         }));
     }

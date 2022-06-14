@@ -1,5 +1,5 @@
 package model;
 
 public interface OnPlantUpdateListener {
-    void onPlantUpdate();
+    void onPlantUpdate(SystemPlant plant);
 }

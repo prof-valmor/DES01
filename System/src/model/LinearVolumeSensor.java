@@ -8,7 +8,7 @@ public class LinearVolumeSensor implements VolumeSensor{
     }
     @Override
     public void updateCurrentMeasurement(double volume) {
-        this.currentVolumeReading += volume;
+        this.currentVolumeReading = volume;
     }
 
     @Override

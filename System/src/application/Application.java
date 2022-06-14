@@ -1,30 +1,16 @@
 package application;
 
-import model.OnPlantUpdateListener;
+import gui.MainWindow;
 import model.SystemPlant;
-import model.ValveState;
-
-import java.util.Timer;
-import java.util.TimerTask;
+import model.control.SimpleControl;
 
 public class Application {
 
     public static void main(String[] args) {
         System.out.println(">> Starting it...");
+        MainWindow mainWindow = new MainWindow();
+        mainWindow.setVisible(true);
         //
-        SystemPlant plant = new SystemPlant();
-
-        plant.setListener(new OnPlantUpdateListener() {
-            @Override
-            public void onPlantUpdate() {
-                double volume = plant.getTheSensor().getCurrentMeasurement();
-                System.out.println(">> Volume: " + volume);
-                System.out.println(">> Volume %: " + plant.getVolumePercentage());
-            }
-        });
-
-        plant.getInputValve().setState(ValveState.OPEN);
-        plant.turnOn();
-
+        SimpleControl.getInstance().defineSetPoints(200, 250);
     }
 }

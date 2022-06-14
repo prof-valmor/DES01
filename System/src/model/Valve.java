@@ -1,11 +1,13 @@
 package model;
 
+import java.util.Vector;
+
 /**
  * Represents a valve on the system which gets updated on a time base.
  */
 public class Valve implements OnTimeTick {
     private ValveState state;
-    private ValveListener listener;
+    private Vector<ValveListener> listenersList;
     /**
      * flow l/time
      */
@@ -14,6 +16,7 @@ public class Valve implements OnTimeTick {
     public Valve(double flow) {
         state = ValveState.CLOSED;
         this.flow = flow;
+        listenersList = new Vector<>(1);
     }
 
     public void setState(ValveState state) {
@@ -24,13 +27,21 @@ public class Valve implements OnTimeTick {
         return state;
     }
 
-    public void setListener(ValveListener listener) {
-        this.listener = listener;
+    public void addListener(ValveListener listener) {
+        if(!listenersList.contains(listener)) listenersList.add(listener);
     }
 
     @Override
     public void onTimePass(int secondsSinceLastCall) {
         if(state == ValveState.OPEN || state == ValveState.STUCK_OPEN)
-            if(listener != null) listener.onValveUpdate(this.flow * secondsSinceLastCall);
+            for(ValveListener l : listenersList) l.onValveUpdate(this.flow * secondsSinceLastCall);
+    }
+
+    public void closeIt() {
+        setState(ValveState.CLOSED);
+    }
+
+    public void openIt() {
+        setState(ValveState.OPEN);
     }
 }

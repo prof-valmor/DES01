@@ -1,9 +1,11 @@
 package gui;
 
-import model.OnPlantUpdateListener;
-import model.SystemPlant;
-import model.ValveListener;
-import model.ValveState;
+import model.control.FailuteModeControlListener;
+import model.diagnoser.Diagnoser;
+import model.diagnoser.DiagnoserListener;
+import model.plant.OnPlantUpdateListener;
+import model.plant.SystemPlant;
+import model.plant.ValveState;
 import model.control.SimpleControl;
 
 import javax.swing.*;
@@ -11,11 +13,11 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-public class MainWindow extends JFrame implements ActionListener {
+public class MainWindow extends JFrame implements ActionListener, FailuteModeControlListener {
     private JButton btON, btValveOn, btOtherValveOn, btControlOn, btFailureOn;
-    private JLabel label;
+    private JLabel label, label2;
     private  JProgressBar tank;
-    private JLabel lbInValve, lbOutValve, lbCtrlState;
+    private JLabel lbInValve, lbOutValve, lbCtrlState, lbFailureModeState;
 
     public MainWindow () {
         super("Planta");
@@ -24,25 +26,42 @@ public class MainWindow extends JFrame implements ActionListener {
         SystemPlant.getInstance().setListener(new OnPlantUpdateListener() {
             @Override
             public void onPlantUpdate(SystemPlant plant) {
-                double volume = plant.getTheSensor().getCurrentMeasurement();
+//                double volume = plant.getTheSensor().getCurrentMeasurement();
+                double volume = plant.getTheTank().getRealVolume();
+                double totalVolume = plant.getTheTank().getTotalVolume();
                 tank.setValue((int)volume);
-                label.setText(String.format("%.2f", volume) + " L - " + String.format("%.2f", plant.getVolumePercentage() * 100)+" % ");
+                label.setText(String.format("%.2f", volume) + " L - " + String.format("%.2f", (volume/totalVolume) * 100)+" % ");
                 lbInValve.setText("InValve: " + plant.getInputValve().getState());
                 lbOutValve.setText("OutValve: " + plant.getOutputValve().getState());
                 lbCtrlState.setText("Ctrl State: " + SimpleControl.getInstance().getState());
             }
         });
+        //
+        Diagnoser.getInstance().addListener(new DiagnoserListener() {
+            @Override
+            public void onFailureState(Diagnoser.State diagnoserState) {
+                label2.setText("Failure: " + diagnoserState);
+            }
+
+            @Override
+            public void onFailureOff() {
+                label2.setText("Failure Off...");
+            }
+        });
     }
+
 
     private void initComponents() {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
-        JPanel header = new JPanel(new GridLayout(2,1));
+        JPanel header = new JPanel(new GridLayout(3,1));
         add(header, BorderLayout.NORTH);
 
         header.add(btON = new JButton("ON"));
         header.add(label = new JLabel("volume:"));
+        header.add(label2 = new JLabel("Diagnostic State: "));
         label.setHorizontalAlignment(JLabel.CENTER);
+        label2.setHorizontalAlignment(JLabel.CENTER);
 
         btON.addActionListener(this);
         setSize(500, 300);
@@ -68,6 +87,7 @@ public class MainWindow extends JFrame implements ActionListener {
         west.add(lbInValve = new JLabel("InValve: "));
         west.add(lbOutValve = new JLabel("OutValve: "));
         west.add(lbCtrlState = new JLabel("Ctrl State: "));
+        west.add(lbFailureModeState = new JLabel("FM State: "));
     }
 
     @Override
@@ -114,7 +134,20 @@ public class MainWindow extends JFrame implements ActionListener {
             }
         }
         else if(source == btFailureOn) {
+            if(btFailureOn.getText().equalsIgnoreCase("Failure ON")) {
+                btFailureOn.setText("Failure OFF");
+                SystemPlant.getInstance().getTheSensor().activateFailure();
+            }
+            else {
+                btFailureOn.setText("Failure ON");
+                SystemPlant.getInstance().getTheSensor().deactivateFailure();
+            }
 
         }
+    }
+
+    @Override
+    public void onStateChange(String state) {
+        lbFailureModeState.setText("FM State: " + state);
     }
 }

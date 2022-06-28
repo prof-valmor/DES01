@@ -1,4 +1,4 @@
-package model;
+package model.plant;
 
 import java.util.Vector;
 
@@ -53,5 +53,9 @@ public class Tank {
 
     public double getTotalVolume() {
         return totalVolume;
+    }
+
+    public double getRealVolume() {
+        return currentVolume;
     }
 }

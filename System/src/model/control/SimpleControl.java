@@ -1,21 +1,27 @@
 package model.control;
 
-import model.SimpleSensor;
-import model.SystemPlant;
-import model.VolumeSensor;
+import model.plant.SimpleSensor;
+import model.plant.SystemPlant;
+import model.plant.VolumeSensor;
 
+import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
 
 public class SimpleControl {
     private static SimpleControl instance;
     private Timer timer;
-    private TheTask task;
+    private The1Task task;
 
     private SimpleControl() {
-        timer = new Timer();
-        task = new TheTask(SystemPlant.getInstance());
-        timer.scheduleAtFixedRate(task, 0, 250);
+
+    }
+    public void initialize(SystemPlant plant) {
+        if(timer == null) {
+            timer = new Timer("SimpleControl");
+            task = new The1Task(plant);
+            timer.scheduleAtFixedRate(task, 0, 250);
+        }
     }
 
     public static SimpleControl getInstance() {
@@ -40,9 +46,16 @@ public class SimpleControl {
     public String getState() {
         return task.state + "";
     }
+
+    public enum Event {
+        InOpen, InClose, OutOpen, OutClose, HSup, HInf, HMax
+    }
+    public void addListener(ControlListener listener) {
+        task.addListener(listener);
+    }
 }
 
-class TheTask extends TimerTask {
+class The1Task extends TimerTask {
     private SystemPlant plant;
     public boolean isON;
     private boolean isTankFull;
@@ -50,16 +63,27 @@ class TheTask extends TimerTask {
     private double currentTankVolume;
     public double setPointHigh;
     public double setPointLow;
+    private ArrayList<ControlListener> listenerArrayList;
+
+    public void addListener(ControlListener listener) {
+        if(!listenerArrayList.contains(listener)) listenerArrayList.add(listener);
+    }
+
+    private void updateListeners(SimpleControl.Event event) {
+        for(ControlListener l : listenerArrayList)
+            l.onEvent(event);
+    }
 
     enum STATE {
         UM, DOIS, TRES, QUATRO, CINCO, SEIS
     }
     STATE state;
 
-    public TheTask(SystemPlant plant) {
+    public The1Task(SystemPlant plant) {
         this.plant = plant;
         isON = false;
         state = STATE.UM;
+        listenerArrayList = new ArrayList<>(1);
         //
         plant.getTheTank().setTankEmptySensor(new SimpleSensor() {
             @Override
@@ -83,45 +107,47 @@ class TheTask extends TimerTask {
                 isTankFull = false;
             }
         });
-        plant.getTheTank().addVolumeSensor(new VolumeSensor() {
-            @Override
-            public void updateCurrentMeasurement(double volume) {
-                currentTankVolume = volume;
-            }
-
-            @Override
-            public double getCurrentMeasurement() {
-                return 0;
-            }
-        });
     }
     @Override
     public void run() {
         if(isON) {
+            double currentTankVolume = plant.getTheSensor().getCurrentMeasurement();
+            // generates the event...
+            if(currentTankVolume == Double.MAX_VALUE)
+                updateListeners(SimpleControl.Event.HMax);
+            // state machine.
             switch(state) {
                 case UM -> {
-                    if(currentTankVolume >= setPointHigh) {
-                        state = STATE.DOIS;
-                    }
+                    plant.getInputValve().openIt();
+                    state = STATE.DOIS;
+                    updateListeners(SimpleControl.Event.InOpen);
                 }
                 case DOIS -> {
-                    plant.getInputValve().closeIt();
-                    state = STATE.TRES;
+                    if(currentTankVolume >= setPointHigh) {
+                        state = STATE.TRES;
+                        updateListeners(SimpleControl.Event.HSup);
+                    }
                 }
                 case TRES -> {
-                    plant.getOutputValve().openIt();
+                    plant.getInputValve().closeIt();
                     state = STATE.QUATRO;
+                    updateListeners(SimpleControl.Event.InClose);
                 }
                 case QUATRO -> {
-                    if(currentTankVolume <= setPointLow) state = STATE.CINCO;
+                    plant.getOutputValve().openIt();
+                    state = STATE.CINCO;
+                    updateListeners(SimpleControl.Event.OutOpen);
                 }
                 case CINCO -> {
-                    plant.getOutputValve().closeIt();
-                    state = STATE.SEIS;
+                    if(currentTankVolume <= setPointLow) {
+                        state = STATE.SEIS;
+                        updateListeners(SimpleControl.Event.HInf);
+                    }
                 }
                 case SEIS -> {
-                    plant.getInputValve().openIt();
+                    plant.getOutputValve().closeIt();
                     state = STATE.UM;
+                    updateListeners(SimpleControl.Event.OutClose);
                 }
             }
         }

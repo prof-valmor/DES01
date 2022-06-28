@@ -1,4 +1,4 @@
-package model;
+package model.plant;
 
 import java.util.Timer;
 import java.util.TimerTask;
@@ -25,8 +25,8 @@ public class SystemPlant {
 
     private SystemPlant() {
         theTank     = new Tank(300.0);
-        inputValve  = new Valve(10.23);
-        outputValve = new Valve(11.01);
+        inputValve  = new Valve(5.23);
+        outputValve = new Valve(5.22);
         theSensor   = new LinearVolumeSensor();
         theTank.addVolumeSensor(theSensor);
         //

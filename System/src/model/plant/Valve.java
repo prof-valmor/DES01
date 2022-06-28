@@ -1,4 +1,4 @@
-package model;
+package model.plant;
 
 import java.util.Vector;
 

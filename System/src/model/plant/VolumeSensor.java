@@ -1,4 +1,4 @@
-package model;
+package model.plant;
 
 /**
  * Sensor that observes the volume of a tank.
@@ -6,4 +6,6 @@ package model;
 public interface VolumeSensor {
     void updateCurrentMeasurement(double volume);
     double getCurrentMeasurement();
+    void activateFailure();
+    void deactivateFailure();
 }
